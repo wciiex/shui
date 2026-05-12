@@ -72,6 +72,35 @@
   button:hover { transform: translateY(-2px); }
   button.ghost { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.4); }
   .hint { margin-top: 18px; font-size: 12px; opacity: 0.7; line-height: 1.6; }
+
+  /* ===== 防烧屏模式 ===== */
+  .card { transition: transform 6s ease-in-out, opacity 4s ease; }
+  body.antiburn {
+    background: #000 !important;
+    transition: background 3s ease;
+  }
+  body.antiburn .bubbles { opacity: 0.15; transition: opacity 3s; }
+  body.antiburn .card {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: transparent;
+    box-shadow: none;
+    opacity: 0.55;
+  }
+  body.antiburn .stats,
+  body.antiburn .buttons,
+  body.antiburn .sub,
+  body.antiburn .hint,
+  body.antiburn .label { opacity: 0; pointer-events: none; transition: opacity 2s; }
+  body.antiburn .drop { font-size: 40px; animation: none; }
+  body.antiburn h1 { font-size: 14px; opacity: 0.5; margin: 0; }
+  body.antiburn .timer { font-size: 36px; opacity: 0.7; margin: 6px 0 0; }
+  .antiburn-exit {
+    position: fixed; inset: 0; z-index: 20;
+    display: none; background: transparent; cursor: pointer;
+  }
+  body.antiburn .antiburn-exit { display: block; }
   /* Alert overlay */
   .overlay {
     position: fixed; inset: 0; z-index: 10;
@@ -95,6 +124,7 @@
 </head>
 <body>
   <div class="bubbles" id="bubbles"></div>
+  <div class="antiburn-exit" id="antiburnExit" title="点击退出防烧屏模式"></div>
 
   <div class="card">
     <div class="drop">💧</div>
@@ -118,7 +148,8 @@
     <div class="hint">
       首次点击「开始提醒」会请求通知权限,保持此页面打开即可。<br/>
       提醒触发时会弹窗 + 响铃 + 系统通知。<br/>
-      <span id="wakeStatus">🔓 屏幕常亮:未开启</span>
+      <span id="wakeStatus">🔓 屏幕常亮:未开启</span><br/>
+      🛡️ 运行后 60 秒无操作会自动进入「防烧屏模式」（元素缓慢飘移，避免像素烧入），点击屏幕恢复。
     </div>
   </div>
 
@@ -138,6 +169,9 @@
   let count = 0;
   let startedAt = null;
   let wakeLock = null;
+  let idleTimer = null;
+  let antiburnShiftTimer = null;
+  const IDLE_MS = 60 * 1000; // 60s 无操作进入防烧屏
 
   const $timer = document.getElementById('timer');
   const $count = document.getElementById('count');
@@ -242,6 +276,7 @@
     // Wake the audio context via user gesture so beep works later
     try { (audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()).resume(); } catch(e){}
     requestWakeLock();
+    resetIdleTimer();
     ticking = setInterval(tick, 1000);
     $btnStart.textContent = '运行中…';
     render();
@@ -249,6 +284,8 @@
   function pause() {
     if (ticking) { clearInterval(ticking); ticking = null; }
     releaseWakeLock();
+    clearTimeout(idleTimer);
+    exitAntiBurn();
     $btnStart.textContent = '继续';
     render();
   }
@@ -265,6 +302,40 @@
   $btnPause.addEventListener('click', pause);
   $btnReset.addEventListener('click', reset);
   $btnOk.addEventListener('click', () => $overlay.classList.remove('show'));
+
+  // ===== 防烧屏模式 =====
+  const $card = document.querySelector('.card');
+  function shiftCard() {
+    // 在中心附近随机微axis 移动，避免长时间固定像素
+    const dx = (Math.random() - 0.5) * 120; // ±60px
+    const dy = (Math.random() - 0.5) * 160; // ±80px
+    $card.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+  function enterAntiBurn() {
+    if (document.body.classList.contains('antiburn')) return;
+    document.body.classList.add('antiburn');
+    shiftCard();
+    antiburnShiftTimer = setInterval(shiftCard, 15000); // 每 15s 换一个位置
+  }
+  function exitAntiBurn() {
+    if (!document.body.classList.contains('antiburn')) { resetIdleTimer(); return; }
+    document.body.classList.remove('antiburn');
+    $card.style.transform = '';
+    clearInterval(antiburnShiftTimer); antiburnShiftTimer = null;
+    resetIdleTimer();
+  }
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { if (ticking) enterAntiBurn(); }, IDLE_MS);
+  }
+  // 任意交互 = 退出防烧屏 + 重置计时
+  ['pointerdown','touchstart','keydown','mousemove'].forEach(ev =>
+    window.addEventListener(ev, () => {
+      if (document.body.classList.contains('antiburn')) exitAntiBurn();
+      else resetIdleTimer();
+    }, { passive: true })
+  );
+  document.getElementById('antiburnExit').addEventListener('click', exitAntiBurn);
 
   // Create floating bubbles
   (function createBubbles() {
