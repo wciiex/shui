@@ -73,7 +73,6 @@
   button.ghost { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.4); }
   .hint { margin-top: 18px; font-size: 12px; opacity: 0.7; line-height: 1.6; }
 
-  /* ===== 防烧屏模式 ===== */
   .card { transition: transform 6s ease-in-out, opacity 4s ease; }
   body.antiburn {
     background: #000 !important;
@@ -101,7 +100,6 @@
     display: none; background: transparent; cursor: pointer;
   }
   body.antiburn .antiburn-exit { display: block; }
-  /* Alert overlay */
   .overlay {
     position: fixed; inset: 0; z-index: 10;
     background: rgba(0, 30, 60, 0.85);
@@ -149,7 +147,7 @@
       首次点击「开始提醒」会请求通知权限,保持此页面打开即可。<br/>
       提醒触发时会弹窗 + 响铃 + 系统通知。<br/>
       <span id="wakeStatus">🔓 屏幕常亮:未开启</span><br/>
-      🛡️ 运行后 60 秒无操作会自动进入「防烧屏模式」（元素缓慢飘移，避免像素烧入），点击屏幕恢复。
+      🛡️ 运行后 10 秒无操作会自动进入「防烧屏模式」（元素缓慢飘移，避免像素烧入），点击屏幕恢复。
     </div>
   </div>
 
@@ -163,7 +161,7 @@
   </div>
 
 <script>
-  const INTERVAL = 5 * 60; // seconds
+  const INTERVAL = 5 * 60;
   let remaining = INTERVAL;
   let ticking = null;
   let count = 0;
@@ -171,7 +169,7 @@
   let wakeLock = null;
   let idleTimer = null;
   let antiburnShiftTimer = null;
-  const IDLE_MS = 60 * 1000; // 60s 无操作进入防烧屏
+  const IDLE_MS = 10 * 1000;
 
   const $timer = document.getElementById('timer');
   const $count = document.getElementById('count');
@@ -197,7 +195,6 @@
     document.title = ticking ? `${fmt(remaining)} · 喝水提醒` : '喝水提醒 💧';
   }
 
-  // Audio beep using Web Audio API (no external file)
   let audioCtx = null;
   function beep() {
     try {
@@ -240,7 +237,6 @@
     render();
   }
 
-  // ===== Screen Wake Lock (防止手机息屏) =====
   async function requestWakeLock() {
     if (!('wakeLock' in navigator)) {
       $wakeStatus.textContent = '⚠️ 屏幕常亮:当前浏览器不支持(请用 Chrome/Edge/Safari 最新版,且页面需通过 https 或 localhost 打开)';
@@ -260,7 +256,6 @@
     if (wakeLock) { try { await wakeLock.release(); } catch(e){} wakeLock = null; }
     $wakeStatus.textContent = '🔓 屏幕常亮:未开启';
   }
-  // 切回前台时自动恢复(锁屏/切后台会被系统释放)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && ticking && !wakeLock) {
       requestWakeLock();
@@ -273,7 +268,6 @@
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
-    // Wake the audio context via user gesture so beep works later
     try { (audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()).resume(); } catch(e){}
     requestWakeLock();
     resetIdleTimer();
@@ -303,19 +297,17 @@
   $btnReset.addEventListener('click', reset);
   $btnOk.addEventListener('click', () => $overlay.classList.remove('show'));
 
-  // ===== 防烧屏模式 =====
   const $card = document.querySelector('.card');
   function shiftCard() {
-    // 在中心附近随机微axis 移动，避免长时间固定像素
-    const dx = (Math.random() - 0.5) * 120; // ±60px
-    const dy = (Math.random() - 0.5) * 160; // ±80px
+    const dx = (Math.random() - 0.5) * 120;
+    const dy = (Math.random() - 0.5) * 160;
     $card.style.transform = `translate(${dx}px, ${dy}px)`;
   }
   function enterAntiBurn() {
     if (document.body.classList.contains('antiburn')) return;
     document.body.classList.add('antiburn');
     shiftCard();
-    antiburnShiftTimer = setInterval(shiftCard, 15000); // 每 15s 换一个位置
+    antiburnShiftTimer = setInterval(shiftCard, 15000);
   }
   function exitAntiBurn() {
     if (!document.body.classList.contains('antiburn')) { resetIdleTimer(); return; }
@@ -328,7 +320,6 @@
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => { if (ticking) enterAntiBurn(); }, IDLE_MS);
   }
-  // 任意交互 = 退出防烧屏 + 重置计时
   ['pointerdown','touchstart','keydown','mousemove'].forEach(ev =>
     window.addEventListener(ev, () => {
       if (document.body.classList.contains('antiburn')) exitAntiBurn();
@@ -337,7 +328,6 @@
   );
   document.getElementById('antiburnExit').addEventListener('click', exitAntiBurn);
 
-  // Create floating bubbles
   (function createBubbles() {
     const wrap = document.getElementById('bubbles');
     for (let i = 0; i < 18; i++) {
