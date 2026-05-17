@@ -390,26 +390,36 @@ function setStatus() {
 
 function persist() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      count: state.count,
-      baseElapsedMs: elapsedMs(),
-      pausedRemainingMs: isRunning()
-        ? Math.max(0, state.nextDeadline - now())
-        : state.pausedRemainingMs,
-    }));
+    const data = { count: state.count };
+    if (isRunning()) {
+      data.running = true;
+      data.runStart = state.runStart;
+      data.baseElapsedMs = state.baseElapsedMs;
+      data.nextDeadline = state.nextDeadline;
+    } else {
+      data.baseElapsedMs = elapsedMs();
+      if (state.pausedRemainingMs != null) data.pausedRemainingMs = state.pausedRemainingMs;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
 }
 function restore() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
+    if (!raw) return false;
     const s = JSON.parse(raw);
     if (Number.isFinite(s.count)) state.count = s.count;
     if (Number.isFinite(s.baseElapsedMs)) state.baseElapsedMs = Math.max(0, s.baseElapsedMs);
+    if (s.running && Number.isFinite(s.runStart) && Number.isFinite(s.nextDeadline)) {
+      state.runStart = s.runStart;
+      state.nextDeadline = s.nextDeadline;
+      return true;
+    }
     if (Number.isFinite(s.pausedRemainingMs) && s.pausedRemainingMs > 0) {
       state.pausedRemainingMs = Math.min(s.pausedRemainingMs, INTERVAL_MS);
     }
   } catch (e) {}
+  return false;
 }
 
 function ensureAudio() {
@@ -606,10 +616,20 @@ function resetIdleTimer() {
   }, { passive: true })
 );
 
-restore();
+function autoResume() {
+  ticker = setInterval(tickLoop, 1000);
+  scheduleNext();
+  catchUp();
+  resetIdleTimer();
+  requestWakeLock();
+}
+
+const wasRunning = restore();
 setStatus();
 render();
-setInterval(persist, 30 * 1000);
+if (wasRunning) autoResume();
+setInterval(persist, 5 * 1000);
+window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
 </script>
 </body>
