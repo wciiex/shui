@@ -8,11 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>喝水提醒</title>
 <style>
-  /* ============================================================
-     Vercel / Geist · Mobile-first
-     - One screen, one purpose. No log, no footer.
-     - 48px tap targets, safe-area aware.
-     ============================================================ */
   :root {
     --bg:        #000;
     --bg-1:      #0a0a0a;
@@ -58,7 +53,6 @@
 
   ::selection { background: var(--accent); color: #fff; }
 
-  /* ===== Top bar ===== */
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 8px;
@@ -92,7 +86,6 @@
     50%      { box-shadow: 0 0 0 5px rgba(70, 211, 105, 0); }
   }
 
-  /* ===== Hero (centered, takes available space) ===== */
   .hero {
     flex: 1;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -117,7 +110,6 @@
     color: var(--fg);
     margin: 14px 0 18px;
   }
-  /* Cap on larger phones / tablets / landscape */
   @media (min-width: 480px) { .metric { font-size: 96px; } }
 
   .progress {
@@ -137,7 +129,6 @@
   }
   .progress.is-paused .progress-fill { background: var(--warn); }
 
-  /* ===== Inline stats (single row, no boxes) ===== */
   .stats {
     display: flex;
     justify-content: center;
@@ -159,7 +150,6 @@
     background: var(--fg-3);
   }
 
-  /* ===== Actions ===== */
   .actions {
     margin-top: 28px;
     display: flex; flex-direction: column;
@@ -201,17 +191,16 @@
   .btn.danger:active { background: #1a0a0a; border-color: #4a1f1f; }
 
   .btn.ghost { font-weight: 500; color: var(--fg-1); }
-
-  /* ===== Anti-burn ===== */
-  body.antiburn { transition: opacity 1.5s; }
+  body.antiburn { background: #000 !important; transition: opacity 1.5s; }
   body.antiburn .topbar,
-  body.antiburn .hero > *:not(.metric):not(.kicker),
+  body.antiburn .kicker,
+  body.antiburn .progress,
   body.antiburn .stats,
   body.antiburn .actions { opacity: 0; pointer-events: none; transition: opacity 1.5s; }
-  body.antiburn .kicker { color: var(--fg-3); transition: color 1.5s; }
-  body.antiburn .metric { color: var(--fg-2); transition: color 1.5s; }
+  body.antiburn .metric { color: var(--fg-2); transition: color 1.5s; font-weight: 300; }
+  .hero { transition: transform 6s ease-in-out; }
+  body.antiburn .hero { will-change: transform; }
 
-  /* ===== Modal ===== */
   .overlay {
     position: fixed; inset: 0; z-index: 30;
     background: rgba(0, 0, 0, 0.7);
@@ -259,7 +248,6 @@
     margin-bottom: 16px;
   }
 
-  /* Tablet / landscape: center the sheet instead of bottom */
   @media (min-height: 640px) and (min-width: 480px) {
     .overlay { align-items: center; }
   }
@@ -308,12 +296,10 @@
 <script>
 'use strict';
 
-/* ===== Config ===== */
 const INTERVAL_MS = 5 * 60 * 1000;
 const IDLE_MS     = 10 * 1000;
 const STORAGE_KEY = 'drink-water.v3';
 
-/* ===== State ===== */
 const state = {
   nextDeadline: null,
   pausedRemainingMs: null,
@@ -327,9 +313,9 @@ let scheduledTimeout = null;
 let wakeLock = null;
 let audioCtx = null;
 let idleTimer = null;
+let antiburnShiftTimer = null;
 let lastActivityAt = 0;
 
-/* ===== DOM ===== */
 const $timer        = document.getElementById('timer');
 const $count        = document.getElementById('count');
 const $elapsed      = document.getElementById('elapsed');
@@ -342,8 +328,8 @@ const $status       = document.getElementById('status');
 const $statusText   = document.getElementById('statusText');
 const $progress     = document.getElementById('progress');
 const $progressFill = document.getElementById('progressFill');
+const $hero         = document.querySelector('.hero');
 
-/* ===== Helpers ===== */
 const now = () => Date.now();
 const isRunning = () => state.runStart !== null;
 const isPaused  = () => !isRunning() && state.pausedRemainingMs != null;
@@ -371,7 +357,6 @@ function fmtActive(ms) {
   return mm ? `${h}h ${mm}m` : `${h}h`;
 }
 
-/* ===== Render ===== */
 function render() {
   const r = remainingMs();
   $timer.textContent = fmtTime(r);
@@ -403,7 +388,6 @@ function setStatus() {
   }
 }
 
-/* ===== Persistence ===== */
 function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -428,7 +412,6 @@ function restore() {
   } catch (e) {}
 }
 
-/* ===== Audio ===== */
 function ensureAudio() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -453,14 +436,12 @@ function beep() {
   }
 }
 
-/* Vibration on mobile */
 function vibrate() {
   if ('vibrate' in navigator) {
     try { navigator.vibrate([200, 80, 200]); } catch (e) {}
   }
 }
 
-/* ===== Reminder firing ===== */
 function fireReminder(missed) {
   state.count += missed;
   beep();
@@ -481,7 +462,6 @@ function fireReminder(missed) {
   persist();
 }
 
-/* ===== Scheduler ===== */
 function catchUp() {
   if (!isRunning() || !state.nextDeadline) return;
   const t = now();
@@ -510,7 +490,6 @@ function tickLoop() {
   if (isRunning() && !scheduledTimeout) scheduleNext();
 }
 
-/* ===== Run state ===== */
 function start() {
   if (isRunning()) return;
   if ('Notification' in window && Notification.permission === 'default') {
@@ -568,7 +547,6 @@ function reset() {
   render();
 }
 
-/* ===== Wake lock ===== */
 async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
@@ -587,30 +565,36 @@ document.addEventListener('visibilitychange', () => {
   if (isRunning()) { catchUp(); render(); scheduleNext(); }
 });
 
-/* ===== Buttons ===== */
 $btnPrimary.addEventListener('click', () => {
   if (isRunning()) pause();
   else start();
 });
 $btnReset.addEventListener('click', reset);
 $btnOk.addEventListener('click', () => $overlay.classList.remove('show'));
-// Tap outside sheet to dismiss
 $overlay.addEventListener('click', (e) => {
   if (e.target === $overlay) $overlay.classList.remove('show');
 });
 
-/* ===== Anti-burn ===== */
+function shiftDisplay() {
+  const dx = (Math.random() - 0.5) * 30;
+  const dy = (Math.random() - 0.5) * 30;
+  $hero.style.transform = `translate(${dx.toFixed(1)}vw, ${dy.toFixed(1)}vh)`;
+}
 function enterAntiBurn() {
   if (document.body.classList.contains('antiburn')) return;
   document.body.classList.add('antiburn');
+  shiftDisplay();
+  antiburnShiftTimer = setInterval(shiftDisplay, 18000);
 }
 function exitAntiBurn() {
   if (!document.body.classList.contains('antiburn')) return;
   document.body.classList.remove('antiburn');
+  $hero.style.transform = '';
+  if (antiburnShiftTimer) { clearInterval(antiburnShiftTimer); antiburnShiftTimer = null; }
 }
 function resetIdleTimer() {
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => { if (isRunning()) enterAntiBurn(); }, IDLE_MS);
+  idleTimer = setTimeout(() => enterAntiBurn(), IDLE_MS);
 }
 ['pointerdown','touchstart','keydown'].forEach(ev =>
   window.addEventListener(ev, () => {
@@ -622,7 +606,6 @@ function resetIdleTimer() {
   }, { passive: true })
 );
 
-/* ===== Init ===== */
 restore();
 setStatus();
 render();
