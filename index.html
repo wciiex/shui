@@ -2,346 +2,632 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>喝水提醒 💧</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#000000" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>喝水提醒</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #00c6fb 50%, #005bea 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    overflow: hidden;
-    position: relative;
-  }
-  .bubbles {
-    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
-  }
-  .bubbles span {
-    position: absolute; bottom: -80px;
-    width: 30px; height: 30px; border-radius: 50%;
-    background: rgba(255,255,255,0.18);
-    animation: rise linear infinite;
-  }
-  @keyframes rise {
-    0%   { transform: translateY(0) scale(1); opacity: 0; }
-    10%  { opacity: 1; }
-    100% { transform: translateY(-110vh) scale(1.4); opacity: 0; }
-  }
-  .card {
-    position: relative; z-index: 1;
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 24px;
-    padding: 48px 56px;
-    max-width: 480px; width: 90%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-  }
-  .drop { font-size: 72px; line-height: 1; margin-bottom: 8px; animation: bob 2.8s ease-in-out infinite; }
-  @keyframes bob { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-10px);} }
-  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; letter-spacing: 1px; }
-  .sub { opacity: 0.85; font-size: 14px; margin-bottom: 28px; }
-  .timer {
-    font-variant-numeric: tabular-nums;
-    font-size: 64px; font-weight: 300;
-    margin: 12px 0 8px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  }
-  .label { font-size: 13px; opacity: 0.75; margin-bottom: 24px; }
-  .stats {
-    display: flex; justify-content: space-around;
-    background: rgba(0,0,0,0.12); border-radius: 14px;
-    padding: 14px; margin-bottom: 24px;
-  }
-  .stat b { display:block; font-size: 22px; font-weight: 600; }
-  .stat span { font-size: 12px; opacity: 0.75; }
-  .buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  button {
-    border: none; cursor: pointer;
-    padding: 12px 22px; border-radius: 999px;
-    font-size: 14px; font-weight: 500;
-    background: rgba(255,255,255,0.9); color: #0a66c2;
-    transition: transform .15s, background .2s;
-  }
-  button:hover { transform: translateY(-2px); }
-  button.ghost { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.4); }
-  .hint { margin-top: 18px; font-size: 12px; opacity: 0.7; line-height: 1.6; }
+  /* ============================================================
+     Vercel / Geist · Mobile-first
+     - One screen, one purpose. No log, no footer.
+     - 48px tap targets, safe-area aware.
+     ============================================================ */
+  :root {
+    --bg:        #000;
+    --bg-1:      #0a0a0a;
+    --bg-2:      #161616;
+    --border:    #1f1f1f;
+    --border-2:  #2e2e2e;
+    --fg:        #ededed;
+    --fg-1:      #a1a1a1;
+    --fg-2:      #707070;
+    --fg-3:      #454545;
+    --accent:    #0070f3;
+    --accent-h:  #3291ff;
+    --accent-d:  #0050b8;
+    --success:   #46d369;
+    --warn:      #f5a623;
+    --danger:    #ff5c5c;
 
-  .card { transition: transform 6s ease-in-out, opacity 4s ease; }
-  body.antiburn {
-    background: #000 !important;
-    transition: background 3s ease;
+    --font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Menlo", monospace;
   }
-  body.antiburn .bubbles { opacity: 0.15; transition: opacity 3s; }
-  body.antiburn .card {
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-color: transparent;
-    box-shadow: none;
-    opacity: 0.55;
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--fg);
+    background: var(--bg);
+    overflow: hidden;
+    overscroll-behavior: none;
+    padding:
+      max(env(safe-area-inset-top), 12px)
+      max(env(safe-area-inset-right), 16px)
+      max(env(safe-area-inset-bottom), 16px)
+      max(env(safe-area-inset-left), 16px);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
+
+  ::selection { background: var(--accent); color: #fff; }
+
+  /* ===== Top bar ===== */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .brand {
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.2px;
+    color: var(--fg);
+  }
+
+  .status {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 8px;
+    border: 1px solid var(--border-2);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--fg-1);
+    background: var(--bg-1);
+    transition: border-color .2s, color .2s;
+  }
+  .status .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--fg-2);
+  }
+  .status.is-active { color: #c9f1d6; border-color: #1f3d2a; }
+  .status.is-active .dot { background: var(--success); animation: pulse 2s ease-in-out infinite; }
+  .status.is-paused { color: #f7d8a8; border-color: #4a3416; }
+  .status.is-paused .dot { background: var(--warn); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(70, 211, 105, 0.50); }
+    50%      { box-shadow: 0 0 0 5px rgba(70, 211, 105, 0); }
+  }
+
+  /* ===== Hero (centered, takes available space) ===== */
+  .hero {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px 0;
+    text-align: center;
+  }
+  .kicker {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+  .metric {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    font-size: 22vw;
+    font-weight: 500;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--fg);
+    margin: 14px 0 18px;
+  }
+  /* Cap on larger phones / tablets / landscape */
+  @media (min-width: 480px) { .metric { font-size: 96px; } }
+
+  .progress {
+    width: 100%;
+    max-width: 320px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 1s linear, background-color .3s;
+  }
+  .progress.is-paused .progress-fill { background: var(--warn); }
+
+  /* ===== Inline stats (single row, no boxes) ===== */
+  .stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 22px;
+    color: var(--fg-1);
+    font-size: 13px;
+  }
+  .stats b {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+    font-weight: 500;
+    margin-right: 4px;
+  }
+  .stats .sep {
+    width: 3px; height: 3px; border-radius: 50%;
+    background: var(--fg-3);
+  }
+
+  /* ===== Actions ===== */
+  .actions {
+    margin-top: 28px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+  }
+  .row { display: flex; gap: 10px; }
+  .row > .btn { flex: 1; }
+
+  .btn {
+    appearance: none;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    height: 52px;
+    padding: 0 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border-2);
+    background: var(--bg-1);
+    color: var(--fg);
+    transition: background .15s ease, border-color .15s ease, transform .1s, opacity .15s;
+    width: 100%;
+    display: inline-flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+  .btn:active { transform: scale(0.98); background: var(--bg-2); }
+  .btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn.primary:active { background: var(--accent-d); border-color: var(--accent-d); }
+  .btn.primary:disabled { background: var(--accent); }
+
+  .btn.danger { color: var(--danger); }
+  .btn.danger:active { background: #1a0a0a; border-color: #4a1f1f; }
+
+  .btn.ghost { font-weight: 500; color: var(--fg-1); }
+
+  /* ===== Anti-burn ===== */
+  body.antiburn { transition: opacity 1.5s; }
+  body.antiburn .topbar,
+  body.antiburn .hero > *:not(.metric):not(.kicker),
   body.antiburn .stats,
-  body.antiburn .buttons,
-  body.antiburn .sub,
-  body.antiburn .hint,
-  body.antiburn .label { opacity: 0; pointer-events: none; transition: opacity 2s; }
-  body.antiburn .drop { font-size: 40px; animation: none; }
-  body.antiburn h1 { font-size: 14px; opacity: 0.5; margin: 0; }
-  body.antiburn .timer { font-size: 36px; opacity: 0.7; margin: 6px 0 0; }
-  .antiburn-exit {
-    position: fixed; inset: 0; z-index: 20;
-    display: none; background: transparent; cursor: pointer;
-  }
-  body.antiburn .antiburn-exit { display: block; }
+  body.antiburn .actions { opacity: 0; pointer-events: none; transition: opacity 1.5s; }
+  body.antiburn .kicker { color: var(--fg-3); transition: color 1.5s; }
+  body.antiburn .metric { color: var(--fg-2); transition: color 1.5s; }
+
+  /* ===== Modal ===== */
   .overlay {
-    position: fixed; inset: 0; z-index: 10;
-    background: rgba(0, 30, 60, 0.85);
-    display: none; align-items: center; justify-content: center;
-    animation: fadeIn .3s ease;
+    position: fixed; inset: 0; z-index: 30;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    align-items: flex-end; justify-content: center;
+    padding: 16px;
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
+    animation: fadeIn .2s ease;
   }
   .overlay.show { display: flex; }
   @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-  .alertBox {
-    background: linear-gradient(135deg,#48c6ef,#6f86d6);
-    border-radius: 24px; padding: 48px 56px; text-align: center;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
-    animation: pop .4s cubic-bezier(.2,1.3,.4,1);
+
+  .sheet {
+    background: var(--bg-1);
+    border: 1px solid var(--border-2);
+    border-radius: 16px;
+    padding: 22px 20px 18px;
+    width: 100%;
+    max-width: 420px;
+    animation: rise .3s cubic-bezier(.2,.8,.2,1);
   }
-  @keyframes pop { from {transform: scale(.7); opacity:0;} to {transform: scale(1); opacity:1;} }
-  .alertBox .drop { font-size: 96px; }
-  .alertBox h2 { font-size: 32px; margin: 8px 0 6px; }
-  .alertBox p { opacity: 0.9; margin-bottom: 24px; }
+  @keyframes rise {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .sheet-icon {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .sheet h2 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+  .sheet p {
+    color: var(--fg-1);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  /* Tablet / landscape: center the sheet instead of bottom */
+  @media (min-height: 640px) and (min-width: 480px) {
+    .overlay { align-items: center; }
+  }
 </style>
 </head>
 <body>
-  <div class="bubbles" id="bubbles"></div>
-  <div class="antiburn-exit" id="antiburnExit" title="点击退出防烧屏模式"></div>
 
-  <div class="card">
-    <div class="drop">💧</div>
-    <h1>喝水提醒</h1>
-    <div class="sub">每 5 分钟提醒你喝一口水,保持水润</div>
+  <header class="topbar">
+    <span class="brand">喝水提醒</span>
+    <span class="status" id="status">
+      <span class="dot"></span><span id="statusText">待机</span>
+    </span>
+  </header>
 
-    <div class="timer" id="timer">05:00</div>
-    <div class="label">距离下次提醒</div>
-
+  <main class="hero">
+    <div class="kicker">距下次提醒</div>
+    <div class="metric" id="timer">05:00</div>
+    <div class="progress" id="progress">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
     <div class="stats">
-      <div class="stat"><b id="count">0</b><span>已提醒次数</span></div>
-      <div class="stat"><b id="elapsed">0</b><span>运行分钟</span></div>
+      <span><b id="count">0</b>已提醒</span>
+      <span class="sep"></span>
+      <span><b id="elapsed">0s</b>运行</span>
     </div>
+  </main>
 
-    <div class="buttons">
-      <button id="btnStart">开始提醒</button>
-      <button id="btnPause" class="ghost">暂停</button>
-      <button id="btnReset" class="ghost">重置</button>
-    </div>
-
-    <div class="hint">
-      首次点击「开始提醒」会请求通知权限,保持此页面打开即可。<br/>
-      提醒触发时会弹窗 + 响铃 + 系统通知。<br/>
-      <span id="wakeStatus">🔓 屏幕常亮:未开启</span><br/>
-      🛡️ 运行后 10 秒无操作会自动进入「防烧屏模式」（元素缓慢飘移，避免像素烧入），点击屏幕恢复。
+  <div class="actions">
+    <button class="btn primary" id="btnPrimary">开始提醒</button>
+    <div class="row">
+      <button class="btn ghost danger" id="btnReset">重置</button>
     </div>
   </div>
 
   <div class="overlay" id="overlay">
-    <div class="alertBox">
-      <div class="drop">🥤</div>
-      <h2>该喝水啦!</h2>
-      <p>起来动一动,喝一大口水吧 ~</p>
-      <button id="btnOk">好的,我去喝水 ✓</button>
+    <div class="sheet">
+      <span class="sheet-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6c-.5 0-.96.27-1.22.7C8.96 6.16 5 11.45 5 15a7 7 0 1 0 14 0c0-3.55-3.96-8.84-5.78-11.7-.26-.43-.72-.7-1.22-.7z"/></svg>
+      </span>
+      <h2>该喝水啦</h2>
+      <p id="alertBody">起来动一动,喝一大口水吧。</p>
+      <button class="btn primary" id="btnOk">知道了</button>
     </div>
   </div>
 
 <script>
-  const INTERVAL = 5 * 60;
-  let remaining = INTERVAL;
-  let ticking = null;
-  let count = 0;
-  let startedAt = null;
-  let wakeLock = null;
-  let idleTimer = null;
-  let antiburnShiftTimer = null;
-  const IDLE_MS = 10 * 1000;
+'use strict';
 
-  const $timer = document.getElementById('timer');
-  const $count = document.getElementById('count');
-  const $elapsed = document.getElementById('elapsed');
-  const $overlay = document.getElementById('overlay');
-  const $btnStart = document.getElementById('btnStart');
-  const $btnPause = document.getElementById('btnPause');
-  const $btnReset = document.getElementById('btnReset');
-  const $btnOk = document.getElementById('btnOk');
-  const $wakeStatus = document.getElementById('wakeStatus');
+/* ===== Config ===== */
+const INTERVAL_MS = 5 * 60 * 1000;
+const IDLE_MS     = 10 * 1000;
+const STORAGE_KEY = 'drink-water.v3';
 
-  function fmt(s) {
-    const m = Math.floor(s / 60).toString().padStart(2, '0');
-    const x = (s % 60).toString().padStart(2, '0');
-    return `${m}:${x}`;
+/* ===== State ===== */
+const state = {
+  nextDeadline: null,
+  pausedRemainingMs: null,
+  runStart: null,
+  baseElapsedMs: 0,
+  count: 0,
+};
+
+let ticker = null;
+let scheduledTimeout = null;
+let wakeLock = null;
+let audioCtx = null;
+let idleTimer = null;
+let lastActivityAt = 0;
+
+/* ===== DOM ===== */
+const $timer        = document.getElementById('timer');
+const $count        = document.getElementById('count');
+const $elapsed      = document.getElementById('elapsed');
+const $overlay      = document.getElementById('overlay');
+const $btnPrimary   = document.getElementById('btnPrimary');
+const $btnReset     = document.getElementById('btnReset');
+const $btnOk        = document.getElementById('btnOk');
+const $alertBody    = document.getElementById('alertBody');
+const $status       = document.getElementById('status');
+const $statusText   = document.getElementById('statusText');
+const $progress     = document.getElementById('progress');
+const $progressFill = document.getElementById('progressFill');
+
+/* ===== Helpers ===== */
+const now = () => Date.now();
+const isRunning = () => state.runStart !== null;
+const isPaused  = () => !isRunning() && state.pausedRemainingMs != null;
+const remainingMs = () => {
+  if (state.nextDeadline) return Math.max(0, state.nextDeadline - now());
+  if (state.pausedRemainingMs != null) return state.pausedRemainingMs;
+  return INTERVAL_MS;
+};
+const elapsedMs = () =>
+  state.baseElapsedMs + (state.runStart ? now() - state.runStart : 0);
+
+function fmtTime(ms) {
+  const total = Math.ceil(ms / 1000);
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+function fmtActive(ms) {
+  const total = Math.floor(ms / 1000);
+  if (total < 60) return `${total}s`;
+  const m = Math.floor(total / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return mm ? `${h}h ${mm}m` : `${h}h`;
+}
+
+/* ===== Render ===== */
+function render() {
+  const r = remainingMs();
+  $timer.textContent = fmtTime(r);
+  $count.textContent = state.count;
+  $elapsed.textContent = fmtActive(elapsedMs());
+  $progressFill.style.width = Math.min(100, Math.max(0, (1 - r / INTERVAL_MS) * 100)) + '%';
+  document.title = isRunning() ? `${fmtTime(r)} · 喝水提醒` : '喝水提醒';
+}
+
+function setStatus() {
+  $status.classList.remove('is-active', 'is-paused');
+  $progress.classList.remove('is-paused');
+
+  if (isRunning()) {
+    $status.classList.add('is-active');
+    $statusText.textContent = '运行中';
+    $btnPrimary.textContent = '暂停';
+    $btnPrimary.className = 'btn';
+  } else if (isPaused()) {
+    $status.classList.add('is-paused');
+    $progress.classList.add('is-paused');
+    $statusText.textContent = '已暂停';
+    $btnPrimary.textContent = '继续';
+    $btnPrimary.className = 'btn primary';
+  } else {
+    $statusText.textContent = '待机';
+    $btnPrimary.textContent = '开始提醒';
+    $btnPrimary.className = 'btn primary';
   }
-  function render() {
-    $timer.textContent = fmt(remaining);
-    $count.textContent = count;
-    $elapsed.textContent = startedAt
-      ? Math.floor((Date.now() - startedAt) / 60000)
-      : 0;
-    document.title = ticking ? `${fmt(remaining)} · 喝水提醒` : '喝水提醒 💧';
-  }
+}
 
-  let audioCtx = null;
-  function beep() {
+/* ===== Persistence ===== */
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      count: state.count,
+      baseElapsedMs: elapsedMs(),
+      pausedRemainingMs: isRunning()
+        ? Math.max(0, state.nextDeadline - now())
+        : state.pausedRemainingMs,
+    }));
+  } catch (e) {}
+}
+function restore() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (Number.isFinite(s.count)) state.count = s.count;
+    if (Number.isFinite(s.baseElapsedMs)) state.baseElapsedMs = Math.max(0, s.baseElapsedMs);
+    if (Number.isFinite(s.pausedRemainingMs) && s.pausedRemainingMs > 0) {
+      state.pausedRemainingMs = Math.min(s.pausedRemainingMs, INTERVAL_MS);
+    }
+  } catch (e) {}
+}
+
+/* ===== Audio ===== */
+function ensureAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
+function beep() {
+  ensureAudio();
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  for (const d of [0, 0.25, 0.5]) {
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t0 + d);
+    gain.gain.setValueAtTime(0, t0 + d);
+    gain.gain.linearRampToValueAtTime(0.25, t0 + d + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + d + 0.2);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0 + d);
+    osc.stop(t0 + d + 0.25);
+  }
+}
+
+/* Vibration on mobile */
+function vibrate() {
+  if ('vibrate' in navigator) {
+    try { navigator.vibrate([200, 80, 200]); } catch (e) {}
+  }
+}
+
+/* ===== Reminder firing ===== */
+function fireReminder(missed) {
+  state.count += missed;
+  beep();
+  vibrate();
+  $alertBody.textContent = missed > 1
+    ? `已错过 ${missed} 次提醒,赶紧补一杯水。`
+    : '起来动一动,喝一大口水吧。';
+  $overlay.classList.add('show');
+  if ('Notification' in window && Notification.permission === 'granted') {
     try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      const now = audioCtx.currentTime;
-      [0, 0.25, 0.5].forEach(delay => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, now + delay);
-        gain.gain.setValueAtTime(0, now + delay);
-        gain.gain.linearRampToValueAtTime(0.25, now + delay + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.2);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now + delay);
-        osc.stop(now + delay + 0.25);
+      new Notification('该喝水啦 💧', {
+        body: $alertBody.textContent,
+        tag: 'drink-water',
+        renotify: true,
       });
-    } catch(e) {}
+    } catch (e) {}
   }
+  persist();
+}
 
-  function notify() {
-    count++;
-    beep();
-    $overlay.classList.add('show');
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('💧 该喝水啦!', {
-        body: '起来动一动,喝一大口水吧~',
-        silent: false
-      });
-    }
+/* ===== Scheduler ===== */
+function catchUp() {
+  if (!isRunning() || !state.nextDeadline) return;
+  const t = now();
+  if (t < state.nextDeadline) return;
+  let missed = 0;
+  while (state.nextDeadline <= t) {
+    missed++;
+    state.nextDeadline += INTERVAL_MS;
+  }
+  fireReminder(missed);
+}
+function scheduleNext() {
+  if (scheduledTimeout) { clearTimeout(scheduledTimeout); scheduledTimeout = null; }
+  if (!isRunning() || !state.nextDeadline) return;
+  const dt = Math.max(0, state.nextDeadline - now());
+  scheduledTimeout = setTimeout(() => {
+    scheduledTimeout = null;
+    catchUp();
     render();
-  }
+    scheduleNext();
+  }, dt);
+}
+function tickLoop() {
+  catchUp();
+  render();
+  if (isRunning() && !scheduledTimeout) scheduleNext();
+}
 
-  function tick() {
-    remaining--;
-    if (remaining <= 0) {
-      remaining = INTERVAL;
-      notify();
-    }
-    render();
+/* ===== Run state ===== */
+function start() {
+  if (isRunning()) return;
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { Notification.requestPermission(); } catch (e) {}
   }
+  ensureAudio();
+  requestWakeLock();
 
-  async function requestWakeLock() {
-    if (!('wakeLock' in navigator)) {
-      $wakeStatus.textContent = '⚠️ 屏幕常亮:当前浏览器不支持(请用 Chrome/Edge/Safari 最新版,且页面需通过 https 或 localhost 打开)';
-      return;
-    }
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      $wakeStatus.textContent = '🔒 屏幕常亮:已开启';
-      wakeLock.addEventListener('release', () => {
-        $wakeStatus.textContent = '🔓 屏幕常亮:已释放';
-      });
-    } catch (err) {
-      $wakeStatus.textContent = '⚠️ 屏幕常亮:申请失败(' + err.message + ')';
-    }
-  }
-  async function releaseWakeLock() {
-    if (wakeLock) { try { await wakeLock.release(); } catch(e){} wakeLock = null; }
-    $wakeStatus.textContent = '🔓 屏幕常亮:未开启';
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && ticking && !wakeLock) {
-      requestWakeLock();
-    }
-  });
+  const r = state.pausedRemainingMs ?? INTERVAL_MS;
+  state.pausedRemainingMs = null;
+  state.nextDeadline = now() + r;
+  state.runStart = now();
 
-  function start() {
-    if (ticking) return;
-    if (!startedAt) startedAt = Date.now();
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-    try { (audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()).resume(); } catch(e){}
-    requestWakeLock();
-    resetIdleTimer();
-    ticking = setInterval(tick, 1000);
-    $btnStart.textContent = '运行中…';
-    render();
-  }
-  function pause() {
-    if (ticking) { clearInterval(ticking); ticking = null; }
+  ticker = setInterval(tickLoop, 1000);
+  scheduleNext();
+  resetIdleTimer();
+
+  setStatus();
+  persist();
+  render();
+}
+function pause() {
+  if (!isRunning()) return;
+  state.baseElapsedMs += now() - state.runStart;
+  state.runStart = null;
+  state.pausedRemainingMs = Math.max(0, state.nextDeadline - now());
+  state.nextDeadline = null;
+
+  clearInterval(ticker); ticker = null;
+  if (scheduledTimeout) { clearTimeout(scheduledTimeout); scheduledTimeout = null; }
+  releaseWakeLock();
+  clearTimeout(idleTimer);
+  exitAntiBurn();
+
+  setStatus();
+  persist();
+  render();
+}
+function reset() {
+  if (isRunning()) {
+    clearInterval(ticker); ticker = null;
+    if (scheduledTimeout) { clearTimeout(scheduledTimeout); scheduledTimeout = null; }
     releaseWakeLock();
     clearTimeout(idleTimer);
     exitAntiBurn();
-    $btnStart.textContent = '继续';
-    render();
   }
-  function reset() {
-    pause();
-    remaining = INTERVAL;
-    count = 0;
-    startedAt = null;
-    $btnStart.textContent = '开始提醒';
-    render();
-  }
-
-  $btnStart.addEventListener('click', start);
-  $btnPause.addEventListener('click', pause);
-  $btnReset.addEventListener('click', reset);
-  $btnOk.addEventListener('click', () => $overlay.classList.remove('show'));
-
-  const $card = document.querySelector('.card');
-  function shiftCard() {
-    const dx = (Math.random() - 0.5) * 120;
-    const dy = (Math.random() - 0.5) * 160;
-    $card.style.transform = `translate(${dx}px, ${dy}px)`;
-  }
-  function enterAntiBurn() {
-    if (document.body.classList.contains('antiburn')) return;
-    document.body.classList.add('antiburn');
-    shiftCard();
-    antiburnShiftTimer = setInterval(shiftCard, 15000);
-  }
-  function exitAntiBurn() {
-    if (!document.body.classList.contains('antiburn')) { resetIdleTimer(); return; }
-    document.body.classList.remove('antiburn');
-    $card.style.transform = '';
-    clearInterval(antiburnShiftTimer); antiburnShiftTimer = null;
-    resetIdleTimer();
-  }
-  function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { if (ticking) enterAntiBurn(); }, IDLE_MS);
-  }
-  ['pointerdown','touchstart','keydown','mousemove'].forEach(ev =>
-    window.addEventListener(ev, () => {
-      if (document.body.classList.contains('antiburn')) exitAntiBurn();
-      else resetIdleTimer();
-    }, { passive: true })
-  );
-  document.getElementById('antiburnExit').addEventListener('click', exitAntiBurn);
-
-  (function createBubbles() {
-    const wrap = document.getElementById('bubbles');
-    for (let i = 0; i < 18; i++) {
-      const s = document.createElement('span');
-      const size = 10 + Math.random() * 40;
-      s.style.width = s.style.height = size + 'px';
-      s.style.left = Math.random() * 100 + '%';
-      s.style.animationDuration = (6 + Math.random() * 10) + 's';
-      s.style.animationDelay = (-Math.random() * 10) + 's';
-      wrap.appendChild(s);
-    }
-  })();
-
+  state.nextDeadline = null;
+  state.pausedRemainingMs = null;
+  state.runStart = null;
+  state.baseElapsedMs = 0;
+  state.count = 0;
+  $overlay.classList.remove('show');
+  setStatus();
+  persist();
   render();
+}
+
+/* ===== Wake lock ===== */
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) {}
+}
+async function releaseWakeLock() {
+  if (!wakeLock) return;
+  try { await wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (isRunning() && !wakeLock) requestWakeLock();
+  if (isRunning()) { catchUp(); render(); scheduleNext(); }
+});
+
+/* ===== Buttons ===== */
+$btnPrimary.addEventListener('click', () => {
+  if (isRunning()) pause();
+  else start();
+});
+$btnReset.addEventListener('click', reset);
+$btnOk.addEventListener('click', () => $overlay.classList.remove('show'));
+// Tap outside sheet to dismiss
+$overlay.addEventListener('click', (e) => {
+  if (e.target === $overlay) $overlay.classList.remove('show');
+});
+
+/* ===== Anti-burn ===== */
+function enterAntiBurn() {
+  if (document.body.classList.contains('antiburn')) return;
+  document.body.classList.add('antiburn');
+}
+function exitAntiBurn() {
+  if (!document.body.classList.contains('antiburn')) return;
+  document.body.classList.remove('antiburn');
+}
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { if (isRunning()) enterAntiBurn(); }, IDLE_MS);
+}
+['pointerdown','touchstart','keydown'].forEach(ev =>
+  window.addEventListener(ev, () => {
+    const t = now();
+    if (t - lastActivityAt < 200) return;
+    lastActivityAt = t;
+    if (document.body.classList.contains('antiburn')) exitAntiBurn();
+    if (isRunning()) resetIdleTimer();
+  }, { passive: true })
+);
+
+/* ===== Init ===== */
+restore();
+setStatus();
+render();
+setInterval(persist, 30 * 1000);
+window.addEventListener('beforeunload', persist);
 </script>
 </body>
 </html>
