@@ -296,8 +296,9 @@
 <script>
 'use strict';
 
-const INTERVAL_MS = 5 * 60 * 1000;
-const IDLE_MS     = 10 * 1000;
+const INTERVAL_MS      = 5 * 60 * 1000;
+const IDLE_MS          = 10 * 1000;
+const AUTO_DISMISS_MS  = 10 * 1000;  // 弹窗未确认自动消失的超时
 const STORAGE_KEY = 'drink-water.v3';
 
 const state = {
@@ -310,6 +311,7 @@ const state = {
 
 let ticker = null;
 let scheduledTimeout = null;
+let autoDismissTimer = null;
 let wakeLock = null;
 let audioCtx = null;
 let idleTimer = null;
@@ -460,6 +462,8 @@ function fireReminder(missed) {
     ? `已错过 ${missed} 次提醒,赶紧补一杯水。`
     : '起来动一动,喝一大口水吧。';
   $overlay.classList.add('show');
+  if (autoDismissTimer) clearTimeout(autoDismissTimer);
+  autoDismissTimer = setTimeout(dismissOverlay, AUTO_DISMISS_MS);
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
       new Notification('该喝水啦 💧', {
@@ -470,6 +474,11 @@ function fireReminder(missed) {
     } catch (e) {}
   }
   persist();
+}
+
+function dismissOverlay() {
+  if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null; }
+  $overlay.classList.remove('show');
 }
 
 function catchUp() {
@@ -580,9 +589,9 @@ $btnPrimary.addEventListener('click', () => {
   else start();
 });
 $btnReset.addEventListener('click', reset);
-$btnOk.addEventListener('click', () => $overlay.classList.remove('show'));
+$btnOk.addEventListener('click', dismissOverlay);
 $overlay.addEventListener('click', (e) => {
-  if (e.target === $overlay) $overlay.classList.remove('show');
+  if (e.target === $overlay) dismissOverlay();
 });
 
 function shiftDisplay() {
@@ -612,7 +621,7 @@ function resetIdleTimer() {
     if (t - lastActivityAt < 200) return;
     lastActivityAt = t;
     if (document.body.classList.contains('antiburn')) exitAntiBurn();
-    if (isRunning()) resetIdleTimer();
+    resetIdleTimer();
   }, { passive: true })
 );
 
@@ -628,6 +637,7 @@ const wasRunning = restore();
 setStatus();
 render();
 if (wasRunning) autoResume();
+resetIdleTimer();
 setInterval(persist, 5 * 1000);
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
